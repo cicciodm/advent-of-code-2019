@@ -94,6 +94,23 @@ function smallest(a: number[]): number {
 markPath(testPath1, "tp1");
 markPath(testPath2, "tp2");
 
+let resultString = [];
+
+for (let y = 120; y > -6; y--) {
+	let row = [];
+	for (let x = -5; x < 250; x++) {
+		const indexCoord = x.toString() + "," + y.toString();
+		const val = coordinatesMap.get(indexCoord);
+	
+		const charToPush = !val ? "." : (val[0].split(",")[1] === "R" || val[0].split(",")[1] === "L" ? "-" : "|");
+	
+		row.push(charToPush);
+	}
+	resultString.push(row.join(""));
+}
+
+console.log(resultString);
+
 const intersections = [];
 
 coordinatesMap.forEach((val, key) => {
