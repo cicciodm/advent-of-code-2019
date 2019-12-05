@@ -1,30 +1,37 @@
-import { wire1Path, wire2Path, smallTest1, smallTest2 } from "./inputs";
+import {
+  wire1Path,
+  wire2Path,
+  smallTest1,
+  smallTest2,
+  testPath1,
+  testPath2,
+  testPath3,
+  testPath4
+} from "./inputs";
 
 const coordinatesMap = new Map<string, string[]>();
 
-const stepFormat = /([A-Z])([0-9]*)/;
+const stepFormat = /([A-Z])([0-9]+)/;
 
 type Direction = "U" | "D" | "L" | "R";
 interface Point {
   x: number;
   y: number;
+  steps: number;
 }
 
 function markPath(path: string[], wireName: string): void {
   const currentPoint: Point = {
     x: 0,
-    y: 0
+    y: 0,
+    steps: 0
   };
-
-  let lastDirection;
 
   path.map((step, index) => {
     const matches = step.match(stepFormat);
 
     const direction = matches[1] as Direction;
     const length = parseInt(matches[2]);
-
-    lastDirection = direction;
 
     moveInDirectionFrom(
       currentPoint,
@@ -58,6 +65,7 @@ function moveInDirectionFrom(
         point.x = point.x - 1;
         break;
     }
+    point.steps = point.steps + 1;
 
     const indexCoord = point.x.toString() + "," + point.y.toString();
 
@@ -70,7 +78,9 @@ function moveInDirectionFrom(
           ? getDirectionMarker(direction)
           : isLastDirection
           ? getDirectionMarker(direction)
-          : "+")
+          : "+") +
+        "," +
+        point.steps
     ]);
 
     length--;
@@ -109,9 +119,9 @@ function smallestInArray(a: number[]): number {
 
 function drawPaths(): void {
   let resultString = [];
-  for (let y = 120; y > -20; y--) {
+  for (let y = 10; y > -10; y--) {
     let row = [];
-    for (let x = -10; x < 260; x++) {
+    for (let x = -10; x < 10; x++) {
       const indexCoord = x.toString() + "," + y.toString();
       const val = coordinatesMap.get(indexCoord);
 
@@ -139,12 +149,24 @@ function drawPaths(): void {
   resultString.forEach(row => console.log(row));
 }
 
-function findIntersections(): string[] {
+function calculateSteps(lines: string[]): number {
+  const firstWire = lines[0];
+  const secondWire = lines[1];
+
+  const [firstWireName, firstWireDirection, steps1] = firstWire.split(",");
+  const [secondWireName, secondWireDirection, steps2] = secondWire.split(",");
+
+  return parseInt(steps1) + parseInt(steps2);
+}
+
+function findIntersections(): number[] {
   const intersections = [];
 
   coordinatesMap.forEach((val, key) => {
     if (val.length === 2 && areWiresCrossing(val)) {
-      intersections.push(key);
+      const steps = calculateSteps(val);
+
+      intersections.push(steps);
     }
   });
 
@@ -156,21 +178,22 @@ markPath(wire2Path, "tp2");
 
 // console.log(coordinatesMap);
 
-drawPaths();
+// drawPaths();
 
 const intersections = findIntersections();
+const dist = smallestInArray(intersections);
 
 // const intersections = [];
 
 console.log("Found intersections", intersections);
 
-const distances = intersections.map(coord => {
-  const [x, y] = coord.split(",");
-  return Math.abs(parseInt(x)) + Math.abs(parseInt(y));
-});
+// const distances = intersections.map(coord => {
+//   const [x, y] = coord.split(",");
+//   return Math.abs(parseInt(x)) + Math.abs(parseInt(y));
+// });
 
-console.log("distances", distances);
+// console.log("distances", distances);
 
-const dist = smallestInArray(distances);
+// const dist = smallestInArray(distances);
 
 console.log("Found closest", dist);
