@@ -11,6 +11,9 @@ export const OUTPUT_ADDRESS = 0;
 export const MODE_POSITION = 0;
 export const MODE_PARAMETER = 1;
 
+export const INSTRUCTION_SIZE = 5;
+export const OPCODE_SIZE = 2;
+
 export type OpCode = 99 | 1 | 2 | 3 | 4;
 
 export const opCodeToParameterNumber: { [key in OpCode]: number } = {

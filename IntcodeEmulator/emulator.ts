@@ -56,7 +56,7 @@ function executeCommand(
 
   if (addresses.some(addr => !addr)) {
     console.error(
-      "OOB while accessing addresses, trying to access quartet at index",
+      "OOB while accessing addresses, trying to access ops at index",
       currentIndex
     );
   }
