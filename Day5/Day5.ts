@@ -1,4 +1,4 @@
-import { program, programInput } from "./input";
+import { program, programInput, testProgram } from "./input";
 import { executeProgram } from "../IntcodeEmulator/emulator";
 import { getOpcode, getParameterModes } from "../IntcodeEmulator/utils";
 

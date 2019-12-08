@@ -11,7 +11,11 @@ import {
   OPCODE_INPUT,
   OPCODE_OUTPUT,
   ParameterMode,
-  Operand
+  Operand,
+  OPCODE_JMP_TRUE,
+  OPCODE_JMP_FALSE,
+  OPCODE_LESS_THAN,
+  OPCODE_EQUAL
 } from "./config";
 import { getOpcode, getParameterModes, getOperandValue } from "./utils";
 
@@ -42,10 +46,10 @@ export function executeProgram(program: number[], input?: number): number[] {
   while (currentOpcode !== OPCODE_EXIT) {
     // Execute
     console.log("Executing instruction", program.slice(currentIndex, currentIndex + opCodeToParameterNumber[currentOpcode] + 1));
-    executeInstruction(currentInstruction, currentIndex, program);
-
+    const newIndex = executeInstruction(currentInstruction, currentIndex, program);
+    
     // Step
-    currentIndex += opCodeToParameterNumber[currentOpcode] + 1;
+    currentIndex = newIndex !== undefined ? newIndex : currentIndex + opCodeToParameterNumber[currentOpcode] + 1;
     currentInstruction = program[currentIndex];
     currentOpcode = getOpcode(currentInstruction);
   }
@@ -56,7 +60,7 @@ function executeInstruction(
   instruction: number,
   currentIndex: number,
   program: number[]
-): void {
+): number | undefined {
   // Get data from instruction
   const opCode = getOpcode(instruction);
   const parameterModes = getParameterModes(instruction);
@@ -78,40 +82,74 @@ function executeInstruction(
     );
   }
 
-  performOperation(opCode, operands, program);
+  return performOperation(opCode, operands, program);
 }
 
-function performOperation(opCode: OpCode, operands: Operand[], program: number[]) {
-  let result: number;
-
+function performOperation(
+  opCode: OpCode, 
+  operands: Operand[], 
+  program: number[]
+): number | undefined {
   // Operate
   switch (opCode) {
     case OPCODE_SUM: {
       const op1 = getOperandValue(operands[0]);
       const op2 = getOperandValue(operands[1]);
-      result = op1 + op2;
-      // console.log("result of sum", op1, op2, result);
-      break;
+      const result = op1 + op2;
+      const lastOperand = operands.pop()
+      program[lastOperand.immediate] = result;
+      return undefined;
     }
     case OPCODE_MULTIPLY: {
       const op1 = getOperandValue(operands[0]);
       const op2 = getOperandValue(operands[1]);
-      result = op1 * op2;
-      break;
+      const result = op1 * op2;
+      const lastOperand = operands.pop()
+      program[lastOperand.immediate] = result;
+      return undefined;
     }
     case OPCODE_INPUT: {
       console.log("Please input a value");
-      result = programInput;
-      break;
+      const result = programInput;
+      const lastOperand = operands.pop()
+      program[lastOperand.immediate] = result;
+      return undefined;
     }
     case OPCODE_OUTPUT: {
       console.log("Program Output:", getOperandValue(operands[0]));
-      return;
+      return undefined;
     }
+    case OPCODE_JMP_TRUE: {
+      const toTest = getOperandValue(operands[0]);
+      return toTest !== 0 ? getOperandValue(operands[1]) : undefined;
+    }
+    case OPCODE_JMP_FALSE: {
+      const toTest = getOperandValue(operands[0]);
+      return toTest === 0 ? getOperandValue(operands[1]) : undefined;
+    }
+    case OPCODE_LESS_THAN: {
+      const op1 = getOperandValue(operands[0]);
+      const op2 = getOperandValue(operands[1]);
+      const toWrite = op1 < op2 ? 1 : 0;
+
+      const lastOperand = operands.pop()
+      program[lastOperand.immediate] = toWrite;
+      return undefined;
+    }
+    case OPCODE_EQUAL: {
+      const op1 = getOperandValue(operands[0]);
+      const op2 = getOperandValue(operands[1]);
+      const toWrite = op1 === op2 ? 1 : 0;
+      
+      const lastOperand = operands.pop()
+      program[lastOperand.immediate] = toWrite;
+      return undefined;
+    }
+    default:
+      console.error("ERROR: Unknown opcode", opCode);
   }
 
+  
   // Write
-  const lastOperand = operands.pop()
-  program[lastOperand.immediate] = result;
   // console.log("Storing result", result, "at address", lastOperand.immediate, "program is", program[lastOperand.immediate]);
 }
