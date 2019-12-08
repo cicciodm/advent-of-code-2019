@@ -3,8 +3,6 @@ import {
   VERB_ADDRESS,
   opCodeToParameterNumber,
   OpCode,
-  MODE_POSITION,
-  MODE_IMMEDIATE,
   OPCODE_SUM,
   OPCODE_MULTIPLY,
   OPCODE_EXIT,
@@ -19,7 +17,12 @@ import {
 } from "./config";
 import { getOpcode, getParameterModes, getOperandValue } from "./utils";
 
-// const readline = require('readline');
+const readline = require('readline');
+
+const reader = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
 let programInput;
 
@@ -27,16 +30,16 @@ export function executeProgramWithInputs(
   program: number[],
   noun: number,
   verb: number
-): number[] {
+): void {
   const programCopy = [...program];
 
   programCopy[NOUN_ADDRESS] = noun;
   program[VERB_ADDRESS] = verb;
 
-  return executeProgram(programCopy);
+  executeProgram(programCopy);
 }
 
-export function executeProgram(program: number[], input?: number): number[] {
+export async function executeProgram(program: number[], input?: number): Promise<void> {
   programInput = input;
 
   let currentIndex = 0;
@@ -46,21 +49,20 @@ export function executeProgram(program: number[], input?: number): number[] {
   while (currentOpcode !== OPCODE_EXIT) {
     // Execute
     console.log("Executing instruction", program.slice(currentIndex, currentIndex + opCodeToParameterNumber[currentOpcode] + 1));
-    const newIndex = executeInstruction(currentInstruction, currentIndex, program);
-    
+    const newIndex = await executeInstruction(currentInstruction, currentIndex, program);
+
     // Step
     currentIndex = newIndex !== undefined ? newIndex : currentIndex + opCodeToParameterNumber[currentOpcode] + 1;
     currentInstruction = program[currentIndex];
     currentOpcode = getOpcode(currentInstruction);
   }
-  return program;
 }
 
-function executeInstruction(
+async function executeInstruction(
   instruction: number,
   currentIndex: number,
   program: number[]
-): number | undefined {
+): Promise<number | undefined> {
   // Get data from instruction
   const opCode = getOpcode(instruction);
   const parameterModes = getParameterModes(instruction);
@@ -85,11 +87,11 @@ function executeInstruction(
   return performOperation(opCode, operands, program);
 }
 
-function performOperation(
+async function performOperation(
   opCode: OpCode, 
   operands: Operand[], 
   program: number[]
-): number | undefined {
+): Promise<number | undefined> {
   // Operate
   switch (opCode) {
     case OPCODE_SUM: {
@@ -109,10 +111,10 @@ function performOperation(
       return undefined;
     }
     case OPCODE_INPUT: {
-      console.log("Please input a value");
-      const result = programInput;
+      const input = await readAsyncInput();
+
       const lastOperand = operands.pop()
-      program[lastOperand.immediate] = result;
+      program[lastOperand.immediate] = input;
       return undefined;
     }
     case OPCODE_OUTPUT: {
@@ -148,8 +150,10 @@ function performOperation(
     default:
       console.error("ERROR: Unknown opcode", opCode);
   }
+}
 
-  
-  // Write
-  // console.log("Storing result", result, "at address", lastOperand.immediate, "program is", program[lastOperand.immediate]);
+export function readAsyncInput(): Promise<number> {
+  return reader.question("Please input a value:", response => {
+    return response;
+  });
 }

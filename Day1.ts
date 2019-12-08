@@ -103,7 +103,7 @@ const modules = [
 
 const test = [100756];
 
-const result = modules
+const modulesResult = modules
   .map(value => {
     let currentVal = value;
     let acc = 0;
@@ -119,4 +119,4 @@ const result = modules
   })
   .reduce((sum, current) => sum + current);
 
-console.log(result);
+console.log(modulesResult);
