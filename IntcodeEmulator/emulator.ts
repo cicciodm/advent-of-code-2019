@@ -1,14 +1,23 @@
 import {
-  EXIT_OPCODE,
   NOUN_ADDRESS,
   VERB_ADDRESS,
   opCodeToParameterNumber,
-  SUM_OPCODE,
-  MULTIPLY_OPCODE,
-  OpCode
+  OpCode,
+  MODE_POSITION,
+  MODE_IMMEDIATE,
+  OPCODE_SUM,
+  OPCODE_MULTIPLY,
+  OPCODE_EXIT,
+  OPCODE_INPUT,
+  OPCODE_OUTPUT,
+  ParameterMode,
+  Operand
 } from "./config";
+import { getOpcode, getParameterModes, getOperandValue } from "./utils";
 
-const STEP_SIZE = 4;
+// const readline = require('readline');
+
+let programInput;
 
 export function executeProgramWithInputs(
   program: number[],
@@ -23,71 +32,86 @@ export function executeProgramWithInputs(
   return executeProgram(programCopy);
 }
 
-function executeProgram(program: number[]): number[] {
-  let currentIndex = 0;
-  let currentOpcode = program[0];
+export function executeProgram(program: number[], input?: number): number[] {
+  programInput = input;
 
-  while (currentOpcode !== EXIT_OPCODE) {
+  let currentIndex = 0;
+  let currentInstruction = program[0];
+  let currentOpcode = getOpcode(currentInstruction);
+
+  while (currentOpcode !== OPCODE_EXIT) {
     // Execute
-    executeCommand(currentOpcode as OpCode, currentIndex, program);
+    console.log("Executing instruction", program.slice(currentIndex, currentIndex + opCodeToParameterNumber[currentOpcode] + 1));
+    executeInstruction(currentInstruction, currentIndex, program);
 
     // Step
     currentIndex += opCodeToParameterNumber[currentOpcode] + 1;
-    currentOpcode = program[currentIndex];
+    currentInstruction = program[currentIndex];
+    currentOpcode = getOpcode(currentInstruction);
   }
   return program;
 }
 
-function executeCommand(
-  currentOpcode: OpCode,
+function executeInstruction(
+  instruction: number,
   currentIndex: number,
   program: number[]
 ): void {
+  // Get data from instruction
+  const opCode = getOpcode(instruction);
+  const parameterModes = getParameterModes(instruction);
   const firstIndex = currentIndex + 1;
-  let operationAddresses = opCodeToParameterNumber[currentOpcode];
-  let offset = 1;
 
-  const addresses = [];
+  // Get The values to operate on
+  const operands = parameterModes.map((mode, index) => {
+    return {
+      mode: mode as ParameterMode,
+      immediate: program[firstIndex + index],
+      valueAtAddress: program[program[firstIndex + index]]
+    }
+  })
 
-  while (offset < operationAddresses) {
-    addresses.push(firstIndex + offset);
-    offset++;
-  }
-
-  if (addresses.some(addr => !addr)) {
+  if (operands.some(operand => operand === undefined)) {
     console.error(
       "OOB while accessing addresses, trying to access ops at index",
       currentIndex
     );
   }
 
-  const op1 = program[op1Address];
-  const op2 = program[op2Address];
+  performOperation(opCode, operands, program);
+}
 
-  if (op1 === undefined || op2 === undefined) {
-    console.error(
-      "OOB while accessing values, trying to access quartet at index",
-      currentIndex
-    );
-  }
+function performOperation(opCode: OpCode, operands: Operand[], program: number[]) {
+  let result: number;
 
-  // Execute
-  let result = 0;
-  switch (currentOpcode) {
-    case SUM_OPCODE:
+  // Operate
+  switch (opCode) {
+    case OPCODE_SUM: {
+      const op1 = getOperandValue(operands[0]);
+      const op2 = getOperandValue(operands[1]);
       result = op1 + op2;
+      // console.log("result of sum", op1, op2, result);
       break;
-    case MULTIPLY_OPCODE:
+    }
+    case OPCODE_MULTIPLY: {
+      const op1 = getOperandValue(operands[0]);
+      const op2 = getOperandValue(operands[1]);
       result = op1 * op2;
       break;
-    default:
-      {
-        console.error("Unknown opcode", currentOpcode);
-      }
-      result = 0;
+    }
+    case OPCODE_INPUT: {
+      console.log("Please input a value");
+      result = programInput;
+      break;
+    }
+    case OPCODE_OUTPUT: {
+      console.log("Program Output:", getOperandValue(operands[0]));
+      return;
+    }
   }
 
   // Write
-  const destinationAddress = program[currentIndex + 3];
-  program[destinationAddress] = result;
+  const lastOperand = operands.pop()
+  program[lastOperand.immediate] = result;
+  // console.log("Storing result", result, "at address", lastOperand.immediate, "program is", program[lastOperand.immediate]);
 }

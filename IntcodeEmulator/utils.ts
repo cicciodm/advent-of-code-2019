@@ -1,11 +1,14 @@
 import {
   OPCODE_SIZE,
-  INSTRUCTION_SIZE,
-  opCodeToParameterNumber
+  opCodeToParameterNumber,
+  OpCode,
+  Operand,
+  MODE_POSITION,
+  MODE_IMMEDIATE
 } from "./config";
 
-export function getOpcode(instruction: number): number {
-  return instruction % 100;
+export function getOpcode(instruction: number): OpCode {
+  return instruction % 100 as OpCode;
 }
 
 export function getParameterModes(instructionNum: number): number[] {
@@ -22,4 +25,15 @@ export function getParameterModes(instructionNum: number): number[] {
   }
 
   return modes;
+}
+
+export function getOperandValue(operand: Operand): number {
+  switch (operand.mode) {
+    case MODE_POSITION:
+      return operand.valueAtAddress;
+    case MODE_IMMEDIATE:
+      return operand.immediate;
+    default:
+      break;
+  }
 }
