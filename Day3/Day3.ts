@@ -11,7 +11,7 @@ import {
 
 const coordinatesMap = new Map<string, string[]>();
 
-const stepFormat = /([A-Z])([1-9]+)/;
+const stepFormat = /([A-Z])([0-9]+)/;
 
 type Direction = "U" | "D" | "L" | "R";
 interface Point {
