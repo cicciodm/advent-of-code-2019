@@ -24,8 +24,6 @@ const reader = readline.createInterface({
   output: process.stdout
 });
 
-let programInput;
-
 export function executeProgramWithInputs(
   program: number[],
   noun: number,
@@ -39,9 +37,7 @@ export function executeProgramWithInputs(
   executeProgram(programCopy);
 }
 
-export async function executeProgram(program: number[], input?: number): Promise<void> {
-  programInput = input;
-
+export async function executeProgram(program: number[]): Promise<void> {
   let currentIndex = 0;
   let currentInstruction = program[0];
   let currentOpcode = getOpcode(currentInstruction);
@@ -111,6 +107,7 @@ async function performOperation(
       return undefined;
     }
     case OPCODE_INPUT: {
+      console.log("Please input a value:");
       const input = await readAsyncInput();
 
       const lastOperand = operands.pop()
@@ -152,8 +149,9 @@ async function performOperation(
   }
 }
 
-export function readAsyncInput(): Promise<number> {
-  return reader.question("Please input a value:", response => {
-    return response;
-  });
+async function readAsyncInput(): Promise<number> {
+  for await (const line of reader) {
+    reader.close();
+    return parseInt(line);
+  }
 }
