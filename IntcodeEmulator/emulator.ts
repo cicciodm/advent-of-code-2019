@@ -17,7 +17,11 @@ import {
 } from "./config";
 import { getOpcode, getParameterModes, getOperandValue } from "./utils";
 
-const readline = require('readline');
+const readline = require("readline");
+const noop = {
+  output: undefined,
+  jumpIndex: undefined
+};
 
 const reader = readline.createInterface({
   input: process.stdin,
@@ -37,28 +41,60 @@ export function executeProgramWithInputs(
   executeProgram(programCopy);
 }
 
-export async function executeProgram(program: number[]): Promise<void> {
+interface InstructionOutput {
+  output: number | undefined;
+  jumpIndex: number | undefined;
+}
+
+export async function executeProgram(
+  program: number[],
+  programInputs?: number[]
+): Promise<number[]> {
   let currentIndex = 0;
   let currentInstruction = program[0];
   let currentOpcode = getOpcode(currentInstruction);
 
+  const programOutputs = [];
+
   while (currentOpcode !== OPCODE_EXIT) {
     // Execute
-    console.log("Executing instruction", program.slice(currentIndex, currentIndex + opCodeToParameterNumber[currentOpcode] + 1));
-    const newIndex = await executeInstruction(currentInstruction, currentIndex, program);
+    console.log(
+      "Executing instruction",
+      program.slice(
+        currentIndex,
+        currentIndex + opCodeToParameterNumber[currentOpcode] + 1
+      )
+    );
+
+    const instructionOutputs = await executeInstruction(
+      currentInstruction,
+      currentIndex,
+      program,
+      programInputs
+    );
+
+    if (instructionOutputs.output !== undefined) {
+      programOutputs.push(instructionOutputs.output);
+    }
 
     // Step
-    currentIndex = newIndex !== undefined ? newIndex : currentIndex + opCodeToParameterNumber[currentOpcode] + 1;
+    currentIndex =
+      instructionOutputs.jumpIndex !== undefined
+        ? instructionOutputs.jumpIndex
+        : currentIndex + opCodeToParameterNumber[currentOpcode] + 1;
     currentInstruction = program[currentIndex];
     currentOpcode = getOpcode(currentInstruction);
   }
+
+  return programOutputs;
 }
 
 async function executeInstruction(
   instruction: number,
   currentIndex: number,
-  program: number[]
-): Promise<number | undefined> {
+  program: number[],
+  programInputs?: number[]
+): Promise<InstructionOutput> {
   // Get data from instruction
   const opCode = getOpcode(instruction);
   const parameterModes = getParameterModes(instruction);
@@ -70,8 +106,8 @@ async function executeInstruction(
       mode: mode as ParameterMode,
       immediate: program[firstIndex + index],
       valueAtAddress: program[program[firstIndex + index]]
-    }
-  })
+    };
+  });
 
   if (operands.some(operand => operand === undefined)) {
     console.error(
@@ -80,58 +116,71 @@ async function executeInstruction(
     );
   }
 
-  return performOperation(opCode, operands, program);
+  return performOperation(opCode, operands, program, programInputs);
 }
 
 async function performOperation(
-  opCode: OpCode, 
-  operands: Operand[], 
-  program: number[]
-): Promise<number | undefined> {
+  opCode: OpCode,
+  operands: Operand[],
+  program: number[],
+  programInputs?: number[]
+): Promise<InstructionOutput> {
   // Operate
   switch (opCode) {
     case OPCODE_SUM: {
       const op1 = getOperandValue(operands[0]);
       const op2 = getOperandValue(operands[1]);
       const result = op1 + op2;
-      const lastOperand = operands.pop()
+      const lastOperand = operands.pop();
       program[lastOperand.immediate] = result;
-      return undefined;
+      return noop;
     }
     case OPCODE_MULTIPLY: {
       const op1 = getOperandValue(operands[0]);
       const op2 = getOperandValue(operands[1]);
       const result = op1 * op2;
-      const lastOperand = operands.pop()
+      const lastOperand = operands.pop();
       program[lastOperand.immediate] = result;
-      return undefined;
+      return noop;
     }
     case OPCODE_INPUT: {
-      console.log("Please input a value:");
-      const input = await readAsyncInput();
+      let input = programInputs.shift();
 
-      const lastOperand = operands.pop()
+      if (input === undefined) {
+        console.log("Please input a value:");
+        input = await readAsyncInput();
+      }
+
+      const lastOperand = operands.pop();
       program[lastOperand.immediate] = input;
-      return undefined;
+      return noop;
     }
     case OPCODE_OUTPUT: {
-      console.log("Program Output:", getOperandValue(operands[0]));
-      return undefined;
+      const operandValue = getOperandValue(operands[0]);
+      console.log("Program Output:", operandValue);
+      return {
+        jumpIndex: undefined,
+        output: operandValue
+      };
     }
     case OPCODE_JMP_TRUE: {
       const toTest = getOperandValue(operands[0]);
-      return toTest !== 0 ? getOperandValue(operands[1]) : undefined;
+      return toTest !== 0
+        ? { jumpIndex: getOperandValue(operands[1]), output: undefined }
+        : noop;
     }
     case OPCODE_JMP_FALSE: {
       const toTest = getOperandValue(operands[0]);
-      return toTest === 0 ? getOperandValue(operands[1]) : undefined;
+      return toTest === 0
+        ? { jumpIndex: getOperandValue(operands[1]), output: undefined }
+        : noop;
     }
     case OPCODE_LESS_THAN: {
       const op1 = getOperandValue(operands[0]);
       const op2 = getOperandValue(operands[1]);
       const toWrite = op1 < op2 ? 1 : 0;
 
-      const lastOperand = operands.pop()
+      const lastOperand = operands.pop();
       program[lastOperand.immediate] = toWrite;
       return undefined;
     }
@@ -139,8 +188,8 @@ async function performOperation(
       const op1 = getOperandValue(operands[0]);
       const op2 = getOperandValue(operands[1]);
       const toWrite = op1 === op2 ? 1 : 0;
-      
-      const lastOperand = operands.pop()
+
+      const lastOperand = operands.pop();
       program[lastOperand.immediate] = toWrite;
       return undefined;
     }
